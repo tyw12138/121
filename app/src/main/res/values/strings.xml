@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">书伴</string>
+    <string name="app_subtitle">你的 AI 小说阅读搭档</string>
+    
+    <!-- 功能名称 -->
+    <string name="feature_chat">AI 角色对话</string>
+    <string name="feature_summary">剧情回顾</string>
+    <string name="feature_characters">人物关系</string>
+    <string name="feature_recommend">智能推荐</string>
+    
+    <!-- 提示文本 -->
+    <string name="hint_input_text">请输入或粘贴小说文本...</string>
+    <string name="hint_input_question">向 AI 提问...</string>
+    <string name="btn_send">发送</string>
+    <string name="btn_analyze">分析剧情</string>
+    <string name="btn_character">人物关系</string>
+    
+    <!-- 权限提示 -->
+    <string name="permission_float_title">需要悬浮窗权限</string>
+    <string name="permission_float_message">书伴需要悬浮窗权限才能在其他应用上层显示，为您提供便捷的阅读辅助服务。</string>
+    <string name="btn_grant_permission">授予权限</string>
+    <string name="btn_start_service">开启服务</string>
+    <string name="btn_stop_service">关闭服务</string>
+    
+    <!-- 服务状态 -->
+    <string name="service_running">服务运行中</string>
+    <string name="service_stopped">服务已停止</string>
+</resources>
