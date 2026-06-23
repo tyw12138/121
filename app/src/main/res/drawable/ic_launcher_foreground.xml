@@ -1,5 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <solid android:color="@color/primary" />
-</shape>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 书本外框 -->
+    <path
+        android:pathData="M30,32 L78,32 L78,76 L30,76 Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- 书本左页 -->
+    <path
+        android:pathData="M32,34 L53,34 L53,74 L32,74 Z"
+        android:fillColor="#F5F3EE" />
+
+    <!-- 书本右页 -->
+    <path
+        android:pathData="M55,34 L76,34 L76,74 L55,74 Z"
+        android:fillColor="#F5F3EE" />
+
+    <!-- 中线装订 -->
+    <path
+        android:pathData="M53,34 L55,34 L55,74 L53,74 Z"
+        android:fillColor="#4A7C59" />
+
+    <!-- 左页文字线条 -->
+    <path
+        android:pathData="M36,42 L49,42"
+        android:strokeColor="#8A8580"
+        android:strokeWidth="1.2" />
+    <path
+        android:pathData="M36,48 L49,48"
+        android:strokeColor="#8A8580"
+        android:strokeWidth="1.2" />
+    <path
+        android:pathData="M36,54 L46,54"
+        android:strokeColor="#8A8580"
+        android:strokeWidth="1.2" />
+
+    <!-- 右页文字线条 -->
+    <path
+        android:pathData="M59,42 L72,42"
+        android:strokeColor="#8A8580"
+        android:strokeWidth="1.2" />
+    <path
+        android:pathData="M59,48 L72,48"
+        android:strokeColor="#8A8580"
+        android:strokeWidth="1.2" />
+    <path
+        android:pathData="M59,54 L68,54"
+        android:strokeColor="#8A8580"
+        android:strokeWidth="1.2" />
+
+    <!-- AI 标识：底部小圆点 -->
+    <path
+        android:pathData="M40,62 L44,62 L44,66 L40,66 Z"
+        android:fillColor="#C4956A" />
+    <path
+        android:pathData="M48,62 L52,62 L52,66 L48,66 Z"
+        android:fillColor="#C4956A" />
+    <path
+        android:pathData="M56,62 L60,62 L60,66 L56,66 Z"
+        android:fillColor="#C4956A" />
+    <path
+        android:pathData="M64,62 L68,62 L68,66 L64,66 Z"
+        android:fillColor="#C4956A" />
+</vector>
