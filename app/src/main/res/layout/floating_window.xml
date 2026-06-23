@@ -66,8 +66,7 @@
         android:layout_marginTop="4dp"
         app:tabIndicatorColor="@color/primary"
         app:tabSelectedTextColor="@color/primary"
-        app:tabTextColor="@color/text_secondary"
-        app:tabTextSize="13sp">
+        app:tabTextColor="@color/text_secondary">
 
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
@@ -170,7 +169,7 @@
                 android:layout_marginTop="4dp"
                 android:backgroundTint="@color/primary"
                 android:text="@string/btn_analyze"
-                android:textColor="@color/text_white"
+                android:textColor="@color/white"
                 android:textSize="13sp" />
 
         </LinearLayout>
@@ -203,7 +202,7 @@
                 android:layout_marginTop="4dp"
                 android:backgroundTint="@color/primary"
                 android:text="@string/btn_character"
-                android:textColor="@color/text_white"
+                android:textColor="@color/white"
                 android:textSize="13sp" />
 
         </LinearLayout>
