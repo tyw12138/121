@@ -33,6 +33,7 @@ class FloatingWindowService : Service() {
     private var minimizedView: View? = null
     private var isExpanded = true
     private var floatingParams: WindowManager.LayoutParams? = null
+    private var minimizedParams: WindowManager.LayoutParams? = null
 
     private val aiEngine = MockAIEngine()
 
@@ -56,10 +57,18 @@ class FloatingWindowService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        removeFloatingWindow()
+        removeAllViews()
     }
 
-    private fun createLayoutParams(): WindowManager.LayoutParams {
+    private fun createLayoutParams(focusable: Boolean): WindowManager.LayoutParams {
+        val flags = mutableListOf(
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        )
+        if (!focusable) {
+            flags.add(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        }
+
         return WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -69,9 +78,7 @@ class FloatingWindowService : Service() {
                 @Suppress("DEPRECATION")
                 WindowManager.LayoutParams.TYPE_PHONE
             },
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            flags.reduce { acc, flag -> acc or flag },
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -80,8 +87,18 @@ class FloatingWindowService : Service() {
         }
     }
 
+    private fun updateFocusable(focusable: Boolean) {
+        if (isExpanded && floatingView != null) {
+            val params = createLayoutParams(focusable)
+            params.x = floatingParams?.x ?: 100
+            params.y = floatingParams?.y ?: 200
+            floatingParams = params
+            windowManager.updateViewLayout(floatingView, params)
+        }
+    }
+
     private fun showFloatingWindow() {
-        val params = createLayoutParams()
+        val params = createLayoutParams(false)
         floatingParams = params
 
         val themedContext = ContextThemeWrapper(this, R.style.Theme_ShuBan)
@@ -90,10 +107,9 @@ class FloatingWindowService : Service() {
         setupFloatingWindow(floatingView!!)
 
         minimizedView = LayoutInflater.from(themedContext).inflate(R.layout.floating_window_minimized, null)
-        setupMinimizedWindow(minimizedView!!)
 
-        setupTouchListener(floatingView!!, params)
-        setupMinimizedTouchListener(minimizedView!!, params)
+        setupMinimizedTouchListener(minimizedView!!)
+        setupHeaderTouchListener(floatingView!!)
 
         windowManager.addView(floatingView, params)
         isExpanded = true
@@ -101,12 +117,9 @@ class FloatingWindowService : Service() {
 
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(floatingView?.windowToken, 0)
-    }
-
-    private fun showKeyboard(view: View) {
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(view, 0)
+        floatingView?.let {
+            imm.hideSoftInputFromWindow(it.windowToken, 0)
+        }
     }
 
     private fun setupFloatingWindow(view: View) {
@@ -144,17 +157,28 @@ class FloatingWindowService : Service() {
         spinnerCharacter.adapter = adapter
 
         etInputText.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) showKeyboard(etInputText)
+            if (hasFocus) {
+                updateFocusable(true)
+            } else {
+                hideKeyboard()
+                updateFocusable(false)
+            }
         }
 
         etQuestion.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) showKeyboard(etQuestion)
+            if (hasFocus) {
+                updateFocusable(true)
+            } else {
+                hideKeyboard()
+                updateFocusable(false)
+            }
         }
 
         val tabClickListener = View.OnClickListener { tab ->
             hideKeyboard()
             etInputText.clearFocus()
             etQuestion.clearFocus()
+            updateFocusable(false)
 
             tabChat.setTextColor(resources.getColor(R.color.text_secondary, null))
             tabChat.setTypeface(null, android.graphics.Typeface.NORMAL)
@@ -175,33 +199,25 @@ class FloatingWindowService : Service() {
                     tabChat.setTextColor(resources.getColor(R.color.primary, null))
                     tabChat.setTypeface(null, android.graphics.Typeface.BOLD)
                     layoutChat.visibility = View.VISIBLE
-                    tabIndicator.layoutParams = (tabIndicator.layoutParams as LinearLayout.LayoutParams).apply {
-                        marginStart = 0
-                    }
+                    (tabIndicator.layoutParams as LinearLayout.LayoutParams).marginStart = 0
                 }
                 R.id.tab_summary -> {
                     tabSummary.setTextColor(resources.getColor(R.color.primary, null))
                     tabSummary.setTypeface(null, android.graphics.Typeface.BOLD)
                     layoutSummary.visibility = View.VISIBLE
-                    tabIndicator.layoutParams = (tabIndicator.layoutParams as LinearLayout.LayoutParams).apply {
-                        marginStart = 80
-                    }
+                    (tabIndicator.layoutParams as LinearLayout.LayoutParams).marginStart = 80
                 }
                 R.id.tab_characters -> {
                     tabCharacters.setTextColor(resources.getColor(R.color.primary, null))
                     tabCharacters.setTypeface(null, android.graphics.Typeface.BOLD)
                     layoutCharacters.visibility = View.VISIBLE
-                    tabIndicator.layoutParams = (tabIndicator.layoutParams as LinearLayout.LayoutParams).apply {
-                        marginStart = 160
-                    }
+                    (tabIndicator.layoutParams as LinearLayout.LayoutParams).marginStart = 160
                 }
                 R.id.tab_recommend -> {
                     tabRecommend.setTextColor(resources.getColor(R.color.primary, null))
                     tabRecommend.setTypeface(null, android.graphics.Typeface.BOLD)
                     layoutRecommend.visibility = View.VISIBLE
-                    tabIndicator.layoutParams = (tabIndicator.layoutParams as LinearLayout.LayoutParams).apply {
-                        marginStart = 240
-                    }
+                    (tabIndicator.layoutParams as LinearLayout.LayoutParams).marginStart = 240
                 }
             }
             tabIndicator.requestLayout()
@@ -229,6 +245,7 @@ class FloatingWindowService : Service() {
             hideKeyboard()
             etInputText.clearFocus()
             etQuestion.clearFocus()
+            updateFocusable(false)
         }
 
         btnAnalyze.setOnClickListener {
@@ -238,6 +255,7 @@ class FloatingWindowService : Service() {
             }
             hideKeyboard()
             etInputText.clearFocus()
+            updateFocusable(false)
         }
 
         btnEmotion.setOnClickListener {
@@ -247,6 +265,7 @@ class FloatingWindowService : Service() {
             }
             hideKeyboard()
             etInputText.clearFocus()
+            updateFocusable(false)
         }
 
         btnTimeline.setOnClickListener {
@@ -270,6 +289,7 @@ class FloatingWindowService : Service() {
             }
             hideKeyboard()
             etInputText.clearFocus()
+            updateFocusable(false)
         }
 
         btnCharacter.setOnClickListener {
@@ -290,6 +310,7 @@ class FloatingWindowService : Service() {
             }
             hideKeyboard()
             etInputText.clearFocus()
+            updateFocusable(false)
         }
 
         btnRelation.setOnClickListener {
@@ -315,6 +336,7 @@ class FloatingWindowService : Service() {
             }
             hideKeyboard()
             etInputText.clearFocus()
+            updateFocusable(false)
         }
 
         btnRecommend.setOnClickListener {
@@ -335,12 +357,14 @@ class FloatingWindowService : Service() {
             }
             hideKeyboard()
             etInputText.clearFocus()
+            updateFocusable(false)
         }
 
         btnMinimize.setOnClickListener {
             hideKeyboard()
             etInputText.clearFocus()
             etQuestion.clearFocus()
+            updateFocusable(false)
             toggleWindowState()
         }
 
@@ -349,10 +373,50 @@ class FloatingWindowService : Service() {
         }
     }
 
-    private fun setupMinimizedWindow(view: View) {
+    private fun setupHeaderTouchListener(view: View) {
+        val header = view.findViewById<View>(R.id.header_layout)
+        var initialX = 0
+        var initialY = 0
+        var initialTouchX = 0f
+        var initialTouchY = 0f
+        var isDragging = false
+
+        header.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialX = floatingParams?.x ?: 0
+                    initialY = floatingParams?.y ?: 0
+                    initialTouchX = event.rawX
+                    initialTouchY = event.rawY
+                    isDragging = false
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.rawX - initialTouchX
+                    val dy = event.rawY - initialTouchY
+                    if (!isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+                        isDragging = true
+                        hideKeyboard()
+                        view.clearFocus()
+                        updateFocusable(false)
+                    }
+                    if (isDragging) {
+                        floatingParams?.x = initialX + dx.toInt()
+                        floatingParams?.y = initialY + dy.toInt()
+                        windowManager.updateViewLayout(view, floatingParams)
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    isDragging = false
+                    false
+                }
+                else -> false
+            }
+        }
     }
 
-    private fun setupMinimizedTouchListener(view: View, params: WindowManager.LayoutParams) {
+    private fun setupMinimizedTouchListener(view: View) {
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
@@ -362,8 +426,8 @@ class FloatingWindowService : Service() {
         view.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    initialX = params.x
-                    initialY = params.y
+                    initialX = minimizedParams?.x ?: 0
+                    initialY = minimizedParams?.y ?: 0
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
@@ -376,9 +440,9 @@ class FloatingWindowService : Service() {
                         isDragging = true
                     }
                     if (isDragging) {
-                        params.x = initialX + dx.toInt()
-                        params.y = initialY + dy.toInt()
-                        windowManager.updateViewLayout(view, params)
+                        minimizedParams?.x = initialX + dx.toInt()
+                        minimizedParams?.y = initialY + dy.toInt()
+                        windowManager.updateViewLayout(view, minimizedParams)
                     }
                     true
                 }
@@ -397,79 +461,39 @@ class FloatingWindowService : Service() {
     private fun toggleWindowState() {
         hideKeyboard()
 
-        val params = createLayoutParams()
-        floatingParams = params
-
         if (isExpanded) {
             windowManager.removeView(floatingView)
-            windowManager.addView(minimizedView, params)
+            minimizedParams = createLayoutParams(false)
+            minimizedParams?.x = floatingParams?.x ?: 100
+            minimizedParams?.y = floatingParams?.y ?: 200
+            windowManager.addView(minimizedView, minimizedParams)
             isExpanded = false
         } else {
             windowManager.removeView(minimizedView)
-            windowManager.addView(floatingView, params)
+            floatingParams = createLayoutParams(false)
+            floatingParams?.x = minimizedParams?.x ?: 100
+            floatingParams?.y = minimizedParams?.y ?: 200
+            windowManager.addView(floatingView, floatingParams)
             isExpanded = true
         }
     }
 
-    private fun setupTouchListener(view: View, params: WindowManager.LayoutParams) {
-        var initialX = 0
-        var initialY = 0
-        var initialTouchX = 0f
-        var initialTouchY = 0f
-        var isDragging = false
-
-        view.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    initialX = params.x
-                    initialY = params.y
-                    initialTouchX = event.rawX
-                    initialTouchY = event.rawY
-                    isDragging = false
-                    true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = event.rawX - initialTouchX
-                    val dy = event.rawY - initialTouchY
-                    if (!isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-                        isDragging = true
-                        hideKeyboard()
-                    }
-                    if (isDragging) {
-                        params.x = initialX + dx.toInt()
-                        params.y = initialY + dy.toInt()
-                        windowManager.updateViewLayout(view, params)
-                    }
-                    true
-                }
-                MotionEvent.ACTION_UP -> {
-                    isDragging = false
-                    false
-                }
-                MotionEvent.ACTION_OUTSIDE -> {
-                    hideKeyboard()
-                    true
-                }
-                else -> false
-            }
-        }
-    }
-
-    private fun removeFloatingWindow() {
+    private fun removeAllViews() {
         hideKeyboard()
         floatingView?.let {
-            if (it.isShown) {
+            try {
                 windowManager.removeView(it)
-            }
+            } catch (_: Exception) {}
         }
         minimizedView?.let {
-            if (it.isShown) {
+            try {
                 windowManager.removeView(it)
-            }
+            } catch (_: Exception) {}
         }
         floatingView = null
         minimizedView = null
         floatingParams = null
+        minimizedParams = null
     }
 
     private fun createNotificationChannel() {
