@@ -18,9 +18,7 @@ import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.google.android.material.tabs.TabLayout
@@ -60,9 +58,7 @@ class FloatingWindowService : Service() {
         removeFloatingWindow()
     }
 
-    private fun createLayoutParams(focusable: Boolean = false): WindowManager.LayoutParams {
-        val flags = WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+    private fun createLayoutParams(): WindowManager.LayoutParams {
         return WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -72,7 +68,9 @@ class FloatingWindowService : Service() {
                 @Suppress("DEPRECATION")
                 WindowManager.LayoutParams.TYPE_PHONE
             },
-            if (focusable) flags else flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -93,26 +91,11 @@ class FloatingWindowService : Service() {
         minimizedView = LayoutInflater.from(themedContext).inflate(R.layout.floating_window_minimized, null)
         setupMinimizedWindow(minimizedView!!)
 
-        setupDragListener(floatingView!!, params)
-        setupDragListener(minimizedView!!, params)
+        setupTouchListener(floatingView!!, params)
+        setupTouchListener(minimizedView!!, params)
 
         windowManager.addView(floatingView, params)
         isExpanded = true
-    }
-
-    private fun updateFocusable(focusable: Boolean) {
-        val params = floatingParams ?: return
-        val view = if (isExpanded) floatingView else minimizedView ?: return
-
-        val flags = params.flags
-        if (focusable) {
-            params.flags = flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
-        } else {
-            params.flags = flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-        }
-        try {
-            windowManager.updateViewLayout(view, params)
-        } catch (_: Exception) {}
     }
 
     private fun hideKeyboard() {
@@ -144,28 +127,19 @@ class FloatingWindowService : Service() {
 
         etInputText.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                updateFocusable(true)
                 showKeyboard(etInputText)
-            } else {
-                hideKeyboard()
-                updateFocusable(false)
             }
         }
 
         etQuestion.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                updateFocusable(true)
                 showKeyboard(etQuestion)
-            } else {
-                hideKeyboard()
-                updateFocusable(false)
             }
         }
 
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 hideKeyboard()
-                updateFocusable(false)
                 etInputText.clearFocus()
                 etQuestion.clearFocus()
 
@@ -201,30 +175,22 @@ class FloatingWindowService : Service() {
                 etQuestion.text.clear()
             }
             hideKeyboard()
-            updateFocusable(false)
             etInputText.clearFocus()
             etQuestion.clearFocus()
         }
 
         btnAnalyze.setOnClickListener {
-            hideKeyboard()
-            updateFocusable(false)
-            etInputText.clearFocus()
-            etQuestion.clearFocus()
-
             val text = etInputText.text.toString()
             if (text.isNotEmpty()) {
                 val summary = aiEngine.summarize(text)
                 tvSummary.text = summary
             }
+            hideKeyboard()
+            etInputText.clearFocus()
+            etQuestion.clearFocus()
         }
 
         btnCharacter.setOnClickListener {
-            hideKeyboard()
-            updateFocusable(false)
-            etInputText.clearFocus()
-            etQuestion.clearFocus()
-
             val text = etInputText.text.toString()
             if (text.isNotEmpty()) {
                 val characters = aiEngine.extractCharacters(text)
@@ -238,11 +204,13 @@ class FloatingWindowService : Service() {
                     characterContainer.addView(characterView)
                 }
             }
+            hideKeyboard()
+            etInputText.clearFocus()
+            etQuestion.clearFocus()
         }
 
         btnMinimize.setOnClickListener {
             hideKeyboard()
-            updateFocusable(false)
             etInputText.clearFocus()
             etQuestion.clearFocus()
             toggleWindowState()
@@ -261,7 +229,6 @@ class FloatingWindowService : Service() {
 
     private fun toggleWindowState() {
         hideKeyboard()
-        updateFocusable(false)
 
         val params = createLayoutParams()
         floatingParams = params
@@ -277,15 +244,14 @@ class FloatingWindowService : Service() {
         }
     }
 
-    private fun setupDragListener(view: View, params: WindowManager.LayoutParams) {
-        val titleBar = view.findViewById<View>(R.id.btn_minimize)?.parent as? View ?: view
+    private fun setupTouchListener(view: View, params: WindowManager.LayoutParams) {
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
 
-        titleBar.setOnTouchListener { _, event ->
+        view.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = params.x
@@ -301,7 +267,6 @@ class FloatingWindowService : Service() {
                     if (!isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
                         isDragging = true
                         hideKeyboard()
-                        updateFocusable(false)
                     }
                     if (isDragging) {
                         params.x = initialX + dx.toInt()
@@ -313,6 +278,10 @@ class FloatingWindowService : Service() {
                 MotionEvent.ACTION_UP -> {
                     isDragging = false
                     false
+                }
+                MotionEvent.ACTION_OUTSIDE -> {
+                    hideKeyboard()
+                    true
                 }
                 else -> false
             }
