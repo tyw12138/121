@@ -32,9 +32,10 @@
             android:layout_height="24dp"
             android:layout_marginEnd="2dp"
             android:gravity="center"
-            android:text="▢"
+            android:text="–"
             android:textColor="@color/text_secondary"
-            android:textSize="14sp"
+            android:textSize="18sp"
+            android:textStyle="bold"
             android:background="?android:attr/selectableItemBackgroundBorderless" />
 
         <TextView
@@ -43,9 +44,9 @@
             android:layout_height="24dp"
             android:layout_marginEnd="2dp"
             android:gravity="center"
-            android:text="▣"
+            android:text="■"
             android:textColor="@color/primary"
-            android:textSize="14sp"
+            android:textSize="11sp"
             android:background="?android:attr/selectableItemBackgroundBorderless" />
 
         <TextView
@@ -54,27 +55,34 @@
             android:layout_height="24dp"
             android:layout_marginEnd="2dp"
             android:gravity="center"
-            android:text="◰"
+            android:text="＋"
             android:textColor="@color/text_secondary"
-            android:textSize="14sp"
+            android:textSize="16sp"
+            android:textStyle="bold"
             android:background="?android:attr/selectableItemBackgroundBorderless" />
 
-        <ImageView
+        <TextView
             android:id="@+id/btn_minimize"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_marginEnd="2dp"
-            android:padding="2dp"
-            android:src="@android:drawable/ic_menu_crop"
-            android:contentDescription="最小化" />
+            android:gravity="center"
+            android:text="–"
+            android:textColor="@color/text_secondary"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
 
-        <ImageView
+        <TextView
             android:id="@+id/btn_close"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:padding="2dp"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
-            android:contentDescription="关闭" />
+            android:gravity="center"
+            android:text="×"
+            android:textColor="@color/text_secondary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
 
     </LinearLayout>
 
