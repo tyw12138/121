@@ -15,6 +15,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -32,6 +33,7 @@ class FloatingWindowService : Service() {
     private var floatingView: View? = null
     private var minimizedView: View? = null
     private var isExpanded = true
+    private var floatingParams: WindowManager.LayoutParams? = null
 
     private val aiEngine = MockAIEngine()
 
@@ -58,9 +60,8 @@ class FloatingWindowService : Service() {
         removeFloatingWindow()
     }
 
-    private fun showFloatingWindow() {
-        // 创建悬浮窗布局参数
-        val params = WindowManager.LayoutParams(
+    private fun createLayoutParams(): WindowManager.LayoutParams {
+        return WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -72,10 +73,16 @@ class FloatingWindowService : Service() {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
-        )
-        params.gravity = Gravity.TOP or Gravity.START
-        params.x = 100
-        params.y = 200
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = 100
+            y = 200
+        }
+    }
+
+    private fun showFloatingWindow() {
+        val params = createLayoutParams()
+        floatingParams = params
 
         // 创建带 Material 主题的 Context，TabLayout 等组件需要
         val themedContext = ContextThemeWrapper(this, R.style.Theme_ShuBan)
@@ -88,18 +95,30 @@ class FloatingWindowService : Service() {
         minimizedView = LayoutInflater.from(themedContext).inflate(R.layout.floating_window_minimized, null)
         setupMinimizedWindow(minimizedView!!)
 
-        // 添加触摸监听
-        setupTouchListener(floatingView!!, params)
-        setupTouchListener(minimizedView!!, params)
+        // 标题栏拖拽
+        setupDragListener(floatingView!!, params)
+        setupDragListener(minimizedView!!, params)
 
         // 默认显示展开状态
         windowManager.addView(floatingView, params)
         isExpanded = true
     }
 
+    private fun setFocusable(focusable: Boolean) {
+        val params = floatingParams ?: return
+        val view = if (isExpanded) floatingView else minimizedView ?: return
+        if (focusable) {
+            params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
+        } else {
+            params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+        }
+        try {
+            windowManager.updateViewLayout(view, params)
+        } catch (_: Exception) {}
+    }
+
     private fun setupFloatingWindow(view: View) {
         val tabLayout = view.findViewById<TabLayout>(R.id.tab_layout)
-        val contentContainer = view.findViewById<FrameLayout>(R.id.content_container)
         val layoutChat = view.findViewById<LinearLayout>(R.id.layout_chat)
         val layoutSummary = view.findViewById<LinearLayout>(R.id.layout_summary)
         val layoutCharacters = view.findViewById<LinearLayout>(R.id.layout_characters)
@@ -113,6 +132,21 @@ class FloatingWindowService : Service() {
         val btnCharacter = view.findViewById<Button>(R.id.btn_character)
         val btnMinimize = view.findViewById<View>(R.id.btn_minimize)
         val btnClose = view.findViewById<View>(R.id.btn_close)
+
+        // EditText 焦点监听：获取焦点时允许输入法，失去焦点时恢复
+        val focusListener = View.OnFocusChangeListener { _, hasFocus ->
+            setFocusable(hasFocus)
+            if (hasFocus) {
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showSoftInput(if (etInputText.isFocused) etInputText else etQuestion, 0)
+            }
+        }
+        etInputText.onFocusChangeListener = focusListener
+        etQuestion.onFocusChangeListener = focusListener
+
+        // 点击 EditText 时确保可聚焦
+        etInputText.setOnClickListener { setFocusable(true) }
+        etQuestion.setOnClickListener { setFocusable(true) }
 
         // Tab 切换
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -149,6 +183,7 @@ class FloatingWindowService : Service() {
                 etInputText.setText(response)
                 etQuestion.text.clear()
             }
+            setFocusable(false)
         }
 
         // 分析剧情按钮
@@ -158,6 +193,7 @@ class FloatingWindowService : Service() {
                 val summary = aiEngine.summarize(text)
                 tvSummary.text = summary
             }
+            setFocusable(false)
         }
 
         // 人物关系按钮
@@ -175,10 +211,12 @@ class FloatingWindowService : Service() {
                     characterContainer.addView(characterView)
                 }
             }
+            setFocusable(false)
         }
 
         // 最小化按钮
         btnMinimize.setOnClickListener {
+            setFocusable(false)
             toggleWindowState()
         }
 
@@ -195,22 +233,8 @@ class FloatingWindowService : Service() {
     }
 
     private fun toggleWindowState() {
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                @Suppress("DEPRECATION")
-                WindowManager.LayoutParams.TYPE_PHONE
-            },
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
-        )
-        params.gravity = Gravity.TOP or Gravity.START
-        params.x = 100
-        params.y = 200
+        val params = createLayoutParams()
+        floatingParams = params
 
         if (isExpanded) {
             // 切换到最小化状态
@@ -225,25 +249,44 @@ class FloatingWindowService : Service() {
         }
     }
 
-    private fun setupTouchListener(view: View, params: WindowManager.LayoutParams) {
+    private fun setupDragListener(view: View, params: WindowManager.LayoutParams) {
+        // 只在标题栏区域响应拖拽，避免和内容区点击冲突
+        val dragHandle = view.findViewById<View>(R.id.btn_minimize)?.parent as? View ?: view
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
+        var isDragging = false
 
-        view.setOnTouchListener { _, event ->
+        dragHandle.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = params.x
                     initialY = params.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
+                    isDragging = false
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    params.x = initialX + (event.rawX - initialTouchX).toInt()
-                    params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager.updateViewLayout(view, params)
+                    val dx = event.rawX - initialTouchX
+                    val dy = event.rawY - initialTouchY
+                    if (!isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+                        isDragging = true
+                    }
+                    if (isDragging) {
+                        params.x = initialX + dx.toInt()
+                        params.y = initialY + dy.toInt()
+                        windowManager.updateViewLayout(view, params)
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!isDragging) {
+                        // 不是拖拽，让子 View 处理点击
+                        view.performClick()
+                    }
+                    isDragging = false
                     true
                 }
                 else -> false
@@ -264,6 +307,7 @@ class FloatingWindowService : Service() {
         }
         floatingView = null
         minimizedView = null
+        floatingParams = null
     }
 
     private fun createNotificationChannel() {
