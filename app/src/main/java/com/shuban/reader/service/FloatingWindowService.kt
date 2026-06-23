@@ -134,6 +134,7 @@ class FloatingWindowService : Service() {
         val etInputText = view.findViewById<EditText>(R.id.et_input_text)
         val etQuestion = view.findViewById<EditText>(R.id.et_question)
         val btnSend = view.findViewById<Button>(R.id.btn_send)
+        val tvChatResponse = view.findViewById<TextView>(R.id.tv_chat_response)
         val tvSummary = view.findViewById<TextView>(R.id.tv_summary)
         val btnAnalyze = view.findViewById<Button>(R.id.btn_analyze)
         val characterContainer = view.findViewById<LinearLayout>(R.id.character_container)
@@ -192,18 +193,17 @@ class FloatingWindowService : Service() {
         })
 
         btnSend.setOnClickListener {
-            hideKeyboard()
-            updateFocusable(false)
-            etInputText.clearFocus()
-            etQuestion.clearFocus()
-
             val text = etInputText.text.toString()
             val question = etQuestion.text.toString()
             if (text.isNotEmpty() && question.isNotEmpty()) {
                 val response = aiEngine.chat(text, question)
-                etInputText.setText(response)
+                tvChatResponse.text = response
                 etQuestion.text.clear()
             }
+            hideKeyboard()
+            updateFocusable(false)
+            etInputText.clearFocus()
+            etQuestion.clearFocus()
         }
 
         btnAnalyze.setOnClickListener {

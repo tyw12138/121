@@ -43,6 +43,23 @@
 
     </LinearLayout>
 
+    <!-- 共享文本输入区 -->
+    <EditText
+        android:id="@+id/et_input_text"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_marginTop="8dp"
+        android:background="@android:color/transparent"
+        android:gravity="top|start"
+        android:hint="@string/hint_input_text"
+        android:inputType="textMultiLine"
+        android:textSize="14sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider" />
+
     <!-- 功能标签页 -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tab_layout"
@@ -74,7 +91,7 @@
     <FrameLayout
         android:id="@+id/content_container"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
+        android:layout_height="240dp"
         android:layout_marginTop="8dp">
 
         <!-- 对话页面 -->
@@ -86,26 +103,9 @@
             android:visibility="visible">
 
             <EditText
-                android:id="@+id/et_input_text"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:background="@android:color/transparent"
-                android:gravity="top|start"
-                android:hint="@string/hint_input_text"
-                android:inputType="textMultiLine"
-                android:textSize="14sp" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/divider" />
-
-            <EditText
                 android:id="@+id/et_question"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
                 android:background="@android:color/transparent"
                 android:hint="@string/hint_input_question"
                 android:inputType="text"
@@ -121,6 +121,21 @@
                 android:textColor="@color/white"
                 android:textSize="14sp" />
 
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="8dp"
+                android:layout_weight="1">
+
+                <TextView
+                    android:id="@+id/tv_chat_response"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp" />
+
+            </ScrollView>
+
         </LinearLayout>
 
         <!-- 剧情页面 -->
@@ -131,18 +146,9 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="剧情摘要"
-                android:textColor="@color/text_primary"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_marginTop="8dp"
                 android:layout_weight="1">
 
                 <TextView
@@ -175,18 +181,9 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="人物关系图谱"
-                android:textColor="@color/text_primary"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_marginTop="8dp"
                 android:layout_weight="1">
 
                 <LinearLayout
