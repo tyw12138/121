@@ -92,7 +92,7 @@ class FloatingWindowService : Service() {
         setupMinimizedWindow(minimizedView!!)
 
         setupTouchListener(floatingView!!, params)
-        setupTouchListener(minimizedView!!, params)
+        setupMinimizedTouchListener(minimizedView!!, params)
 
         windowManager.addView(floatingView, params)
         isExpanded = true
@@ -222,8 +222,50 @@ class FloatingWindowService : Service() {
     }
 
     private fun setupMinimizedWindow(view: View) {
-        view.setOnClickListener {
-            toggleWindowState()
+        // 不用 setOnClickListener，因为 touchListener 会拦截
+        // 点击展开逻辑在 setupMinimizedTouchListener 中处理
+    }
+
+    private fun setupMinimizedTouchListener(view: View, params: WindowManager.LayoutParams) {
+        var initialX = 0
+        var initialY = 0
+        var initialTouchX = 0f
+        var initialTouchY = 0f
+        var isDragging = false
+
+        view.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialX = params.x
+                    initialY = params.y
+                    initialTouchX = event.rawX
+                    initialTouchY = event.rawY
+                    isDragging = false
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.rawX - initialTouchX
+                    val dy = event.rawY - initialTouchY
+                    if (!isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+                        isDragging = true
+                    }
+                    if (isDragging) {
+                        params.x = initialX + dx.toInt()
+                        params.y = initialY + dy.toInt()
+                        windowManager.updateViewLayout(view, params)
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!isDragging) {
+                        // 没有拖拽，视为点击，展开窗口
+                        toggleWindowState()
+                    }
+                    isDragging = false
+                    true
+                }
+                else -> false
+            }
         }
     }
 
