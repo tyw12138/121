@@ -374,14 +374,14 @@ class FloatingWindowService : Service() {
     }
 
     private fun setupHeaderTouchListener(view: View) {
-        val header = view.findViewById<View>(R.id.header_layout)
+        val titleView = view.findViewById<View>(R.id.tv_title)
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
 
-        header.setOnTouchListener { _, event ->
+        titleView.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = floatingParams?.x ?: 0
@@ -409,7 +409,7 @@ class FloatingWindowService : Service() {
                 }
                 MotionEvent.ACTION_UP -> {
                     isDragging = false
-                    false
+                    true
                 }
                 else -> false
             }
