@@ -20,11 +20,9 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
-import com.google.android.material.tabs.TabLayout
 import com.shuban.reader.R
 import com.shuban.reader.ai.MockAIEngine
 
@@ -112,11 +110,16 @@ class FloatingWindowService : Service() {
     }
 
     private fun setupFloatingWindow(view: View) {
-        val tabLayout = view.findViewById<TabLayout>(R.id.tab_layout)
         val layoutChat = view.findViewById<LinearLayout>(R.id.layout_chat)
         val layoutSummary = view.findViewById<LinearLayout>(R.id.layout_summary)
         val layoutCharacters = view.findViewById<LinearLayout>(R.id.layout_characters)
         val layoutRecommend = view.findViewById<LinearLayout>(R.id.layout_recommend)
+
+        val tabChat = view.findViewById<TextView>(R.id.tab_chat)
+        val tabSummary = view.findViewById<TextView>(R.id.tab_summary)
+        val tabCharacters = view.findViewById<TextView>(R.id.tab_characters)
+        val tabRecommend = view.findViewById<TextView>(R.id.tab_recommend)
+        val tabIndicator = view.findViewById<View>(R.id.tab_indicator)
 
         val etInputText = view.findViewById<EditText>(R.id.et_input_text)
         val spinnerCharacter = view.findViewById<Spinner>(R.id.spinner_character)
@@ -135,7 +138,6 @@ class FloatingWindowService : Service() {
         val btnMinimize = view.findViewById<View>(R.id.btn_minimize)
         val btnClose = view.findViewById<View>(R.id.btn_close)
 
-        // 角色选择 Spinner
         val characters = aiEngine.getAvailableCharacters()
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, characters)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -149,31 +151,67 @@ class FloatingWindowService : Service() {
             if (hasFocus) showKeyboard(etQuestion)
         }
 
-        // Tab 切换
-        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                hideKeyboard()
-                etInputText.clearFocus()
-                etQuestion.clearFocus()
+        val tabClickListener = View.OnClickListener { tab ->
+            hideKeyboard()
+            etInputText.clearFocus()
+            etQuestion.clearFocus()
 
-                layoutChat.visibility = View.GONE
-                layoutSummary.visibility = View.GONE
-                layoutCharacters.visibility = View.GONE
-                layoutRecommend.visibility = View.GONE
+            tabChat.setTextColor(resources.getColor(R.color.text_secondary, null))
+            tabChat.setTypeface(null, android.graphics.Typeface.NORMAL)
+            tabSummary.setTextColor(resources.getColor(R.color.text_secondary, null))
+            tabSummary.setTypeface(null, android.graphics.Typeface.NORMAL)
+            tabCharacters.setTextColor(resources.getColor(R.color.text_secondary, null))
+            tabCharacters.setTypeface(null, android.graphics.Typeface.NORMAL)
+            tabRecommend.setTextColor(resources.getColor(R.color.text_secondary, null))
+            tabRecommend.setTypeface(null, android.graphics.Typeface.NORMAL)
 
-                when (tab?.position) {
-                    0 -> layoutChat.visibility = View.VISIBLE
-                    1 -> layoutSummary.visibility = View.VISIBLE
-                    2 -> layoutCharacters.visibility = View.VISIBLE
-                    3 -> layoutRecommend.visibility = View.VISIBLE
+            layoutChat.visibility = View.GONE
+            layoutSummary.visibility = View.GONE
+            layoutCharacters.visibility = View.GONE
+            layoutRecommend.visibility = View.GONE
+
+            when (tab.id) {
+                R.id.tab_chat -> {
+                    tabChat.setTextColor(resources.getColor(R.color.primary, null))
+                    tabChat.setTypeface(null, android.graphics.Typeface.BOLD)
+                    layoutChat.visibility = View.VISIBLE
+                    tabIndicator.layoutParams = (tabIndicator.layoutParams as LinearLayout.LayoutParams).apply {
+                        marginStart = 0
+                    }
+                }
+                R.id.tab_summary -> {
+                    tabSummary.setTextColor(resources.getColor(R.color.primary, null))
+                    tabSummary.setTypeface(null, android.graphics.Typeface.BOLD)
+                    layoutSummary.visibility = View.VISIBLE
+                    tabIndicator.layoutParams = (tabIndicator.layoutParams as LinearLayout.LayoutParams).apply {
+                        marginStart = 80
+                    }
+                }
+                R.id.tab_characters -> {
+                    tabCharacters.setTextColor(resources.getColor(R.color.primary, null))
+                    tabCharacters.setTypeface(null, android.graphics.Typeface.BOLD)
+                    layoutCharacters.visibility = View.VISIBLE
+                    tabIndicator.layoutParams = (tabIndicator.layoutParams as LinearLayout.LayoutParams).apply {
+                        marginStart = 160
+                    }
+                }
+                R.id.tab_recommend -> {
+                    tabRecommend.setTextColor(resources.getColor(R.color.primary, null))
+                    tabRecommend.setTypeface(null, android.graphics.Typeface.BOLD)
+                    layoutRecommend.visibility = View.VISIBLE
+                    tabIndicator.layoutParams = (tabIndicator.layoutParams as LinearLayout.LayoutParams).apply {
+                        marginStart = 240
+                    }
                 }
             }
+            tabIndicator.requestLayout()
+        }
 
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
-        })
+        tabChat.setOnClickListener(tabClickListener)
+        tabSummary.setOnClickListener(tabClickListener)
+        tabCharacters.setOnClickListener(tabClickListener)
+        tabRecommend.setOnClickListener(tabClickListener)
 
-        // 对话发送
         btnSend.setOnClickListener {
             val text = etInputText.text.toString()
             val question = etQuestion.text.toString()
@@ -193,7 +231,6 @@ class FloatingWindowService : Service() {
             etQuestion.clearFocus()
         }
 
-        // 剧情摘要
         btnAnalyze.setOnClickListener {
             val text = etInputText.text.toString()
             if (text.isNotEmpty()) {
@@ -203,7 +240,6 @@ class FloatingWindowService : Service() {
             etInputText.clearFocus()
         }
 
-        // 情感分析
         btnEmotion.setOnClickListener {
             val text = etInputText.text.toString()
             if (text.isNotEmpty()) {
@@ -213,7 +249,6 @@ class FloatingWindowService : Service() {
             etInputText.clearFocus()
         }
 
-        // 时间线
         btnTimeline.setOnClickListener {
             val text = etInputText.text.toString()
             if (text.isNotEmpty()) {
@@ -237,7 +272,6 @@ class FloatingWindowService : Service() {
             etInputText.clearFocus()
         }
 
-        // 人物卡片
         btnCharacter.setOnClickListener {
             val text = etInputText.text.toString()
             if (text.isNotEmpty()) {
@@ -258,12 +292,11 @@ class FloatingWindowService : Service() {
             etInputText.clearFocus()
         }
 
-        // 关系图谱
         btnRelation.setOnClickListener {
             val relations = aiEngine.getCharacterRelations()
             characterContainer.removeAllViews()
             val header = TextView(view.context).apply {
-                text = "【人物关系图谱】\n"
+                text = "【人物关系】\n"
                 setTextColor(resources.getColor(R.color.primary, null))
                 textSize = 14f
                 setTypeface(null, android.graphics.Typeface.BOLD)
@@ -284,7 +317,6 @@ class FloatingWindowService : Service() {
             etInputText.clearFocus()
         }
 
-        // 推荐
         btnRecommend.setOnClickListener {
             val text = etInputText.text.toString()
             if (text.isNotEmpty()) {
@@ -297,7 +329,7 @@ class FloatingWindowService : Service() {
                     bookView.findViewById<TextView>(R.id.tv_book_author).text = book.author
                     bookView.findViewById<TextView>(R.id.tv_book_genre).text = book.genre
                     bookView.findViewById<TextView>(R.id.tv_book_reason).text = book.reason
-                    bookView.findViewById<TextView>(R.id.tv_match_score).text = "${book.matchScore}%匹配"
+                    bookView.findViewById<TextView>(R.id.tv_match_score).text = "${book.matchScore}%"
                     recommendContainer.addView(bookView)
                 }
             }
@@ -318,7 +350,6 @@ class FloatingWindowService : Service() {
     }
 
     private fun setupMinimizedWindow(view: View) {
-        // 点击展开逻辑在 setupMinimizedTouchListener 中处理
     }
 
     private fun setupMinimizedTouchListener(view: View, params: WindowManager.LayoutParams) {
