@@ -9,6 +9,7 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -34,6 +35,7 @@ class FloatingWindowService : Service() {
     private var isExpanded = true
     private var floatingParams: WindowManager.LayoutParams? = null
     private var minimizedParams: WindowManager.LayoutParams? = null
+    private var currentSizeMode = SIZE_MEDIUM
 
     private val aiEngine = MockAIEngine()
 
@@ -51,16 +53,21 @@ class FloatingWindowService : Service() {
         return START_NOT_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
+    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         super.onDestroy()
         removeAllViews()
     }
 
-    private fun createLayoutParams(focusable: Boolean): WindowManager.LayoutParams {
+    private fun dpToPx(dp: Int): Int {
+        return TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(),
+            resources.displayMetrics
+        ).toInt()
+    }
+
+    private fun createLayoutParams(focusable: Boolean, widthDp: Int, heightDp: Int): WindowManager.LayoutParams {
         val flags = mutableListOf(
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
@@ -70,8 +77,8 @@ class FloatingWindowService : Service() {
         }
 
         return WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            dpToPx(widthDp),
+            dpToPx(heightDp),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -82,15 +89,40 @@ class FloatingWindowService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = 100
+            x = 50
             y = 200
+        }
+    }
+
+    private fun getSizeForMode(mode: Int): Pair<Int, Int> {
+        return when (mode) {
+            SIZE_SMALL -> 180 to 240
+            SIZE_MEDIUM -> 280 to 380
+            SIZE_LARGE -> 360 to 480
+            else -> 280 to 380
+        }
+    }
+
+    private fun updateWindowSize(mode: Int) {
+        currentSizeMode = mode
+        val (width, height) = getSizeForMode(mode)
+
+        if (isExpanded && floatingView != null) {
+            floatingParams = createLayoutParams(false, width, height).apply {
+                x = floatingParams?.x ?: 50
+                y = floatingParams?.y ?: 200
+            }
+            windowManager.updateViewLayout(floatingView, floatingParams)
+        } else if (!isExpanded && minimizedView != null) {
+            // 最小化状态也保持小尺寸
         }
     }
 
     private fun updateFocusable(focusable: Boolean) {
         if (isExpanded && floatingView != null) {
-            val params = createLayoutParams(focusable)
-            params.x = floatingParams?.x ?: 100
+            val (width, height) = getSizeForMode(currentSizeMode)
+            val params = createLayoutParams(focusable, width, height)
+            params.x = floatingParams?.x ?: 50
             params.y = floatingParams?.y ?: 200
             floatingParams = params
             windowManager.updateViewLayout(floatingView, params)
@@ -98,7 +130,8 @@ class FloatingWindowService : Service() {
     }
 
     private fun showFloatingWindow() {
-        val params = createLayoutParams(false)
+        val (width, height) = getSizeForMode(currentSizeMode)
+        val params = createLayoutParams(false, width, height)
         floatingParams = params
 
         val themedContext = ContextThemeWrapper(this, R.style.Theme_ShuBan)
@@ -150,6 +183,9 @@ class FloatingWindowService : Service() {
         val btnRecommend = view.findViewById<Button>(R.id.btn_recommend)
         val btnMinimize = view.findViewById<View>(R.id.btn_minimize)
         val btnClose = view.findViewById<View>(R.id.btn_close)
+        val btnSizeSmall = view.findViewById<View>(R.id.btn_size_small)
+        val btnSizeMedium = view.findViewById<View>(R.id.btn_size_medium)
+        val btnSizeLarge = view.findViewById<View>(R.id.btn_size_large)
 
         val characters = aiEngine.getAvailableCharacters()
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, characters)
@@ -157,21 +193,10 @@ class FloatingWindowService : Service() {
         spinnerCharacter.adapter = adapter
 
         etInputText.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                updateFocusable(true)
-            } else {
-                hideKeyboard()
-                updateFocusable(false)
-            }
+            if (hasFocus) updateFocusable(true) else { hideKeyboard(); updateFocusable(false) }
         }
-
         etQuestion.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                updateFocusable(true)
-            } else {
-                hideKeyboard()
-                updateFocusable(false)
-            }
+            if (hasFocus) updateFocusable(true) else { hideKeyboard(); updateFocusable(false) }
         }
 
         val tabClickListener = View.OnClickListener { tab ->
@@ -205,19 +230,19 @@ class FloatingWindowService : Service() {
                     tabSummary.setTextColor(resources.getColor(R.color.primary, null))
                     tabSummary.setTypeface(null, android.graphics.Typeface.BOLD)
                     layoutSummary.visibility = View.VISIBLE
-                    (tabIndicator.layoutParams as LinearLayout.LayoutParams).marginStart = 80
+                    (tabIndicator.layoutParams as LinearLayout.LayoutParams).marginStart = 70
                 }
                 R.id.tab_characters -> {
                     tabCharacters.setTextColor(resources.getColor(R.color.primary, null))
                     tabCharacters.setTypeface(null, android.graphics.Typeface.BOLD)
                     layoutCharacters.visibility = View.VISIBLE
-                    (tabIndicator.layoutParams as LinearLayout.LayoutParams).marginStart = 160
+                    (tabIndicator.layoutParams as LinearLayout.LayoutParams).marginStart = 140
                 }
                 R.id.tab_recommend -> {
                     tabRecommend.setTextColor(resources.getColor(R.color.primary, null))
                     tabRecommend.setTypeface(null, android.graphics.Typeface.BOLD)
                     layoutRecommend.visibility = View.VISIBLE
-                    (tabIndicator.layoutParams as LinearLayout.LayoutParams).marginStart = 240
+                    (tabIndicator.layoutParams as LinearLayout.LayoutParams).marginStart = 210
                 }
             }
             tabIndicator.requestLayout()
@@ -227,6 +252,10 @@ class FloatingWindowService : Service() {
         tabSummary.setOnClickListener(tabClickListener)
         tabCharacters.setOnClickListener(tabClickListener)
         tabRecommend.setOnClickListener(tabClickListener)
+
+        btnSizeSmall.setOnClickListener { updateWindowSize(SIZE_SMALL) }
+        btnSizeMedium.setOnClickListener { updateWindowSize(SIZE_MEDIUM) }
+        btnSizeLarge.setOnClickListener { updateWindowSize(SIZE_LARGE) }
 
         btnSend.setOnClickListener {
             val text = etInputText.text.toString()
@@ -250,9 +279,7 @@ class FloatingWindowService : Service() {
 
         btnAnalyze.setOnClickListener {
             val text = etInputText.text.toString()
-            if (text.isNotEmpty()) {
-                tvSummary.text = aiEngine.summarize(text)
-            }
+            if (text.isNotEmpty()) tvSummary.text = aiEngine.summarize(text)
             hideKeyboard()
             etInputText.clearFocus()
             updateFocusable(false)
@@ -260,9 +287,7 @@ class FloatingWindowService : Service() {
 
         btnEmotion.setOnClickListener {
             val text = etInputText.text.toString()
-            if (text.isNotEmpty()) {
-                tvSummary.text = aiEngine.analyzeEmotion(text)
-            }
+            if (text.isNotEmpty()) tvSummary.text = aiEngine.analyzeEmotion(text)
             hideKeyboard()
             etInputText.clearFocus()
             updateFocusable(false)
@@ -275,12 +300,8 @@ class FloatingWindowService : Service() {
                 val sb = StringBuilder("【剧情时间线】\n\n")
                 for (event in timeline) {
                     val emotionIcon = when (event.emotion) {
-                        "平静" -> "🟢"
-                        "紧张" -> "🔴"
-                        "坚定" -> "🔵"
-                        "激烈" -> "🟠"
-                        "震撼" -> "⚡"
-                        "转折" -> "🔄"
+                        "平静" -> "🟢"; "紧张" -> "🔴"; "坚定" -> "🔵"
+                        "激烈" -> "🟠"; "震撼" -> "⚡"; "转折" -> "🔄"
                         else -> "⚪"
                     }
                     sb.append("$emotionIcon ${event.chapter}：${event.event}\n\n")
@@ -324,7 +345,6 @@ class FloatingWindowService : Service() {
                 setPadding(8, 8, 8, 4)
             }
             characterContainer.addView(header)
-
             for (relation in relations) {
                 val tv = TextView(view.context).apply {
                     text = "🔗 $relation"
@@ -447,9 +467,7 @@ class FloatingWindowService : Service() {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging) {
-                        toggleWindowState()
-                    }
+                    if (!isDragging) toggleWindowState()
                     isDragging = false
                     true
                 }
@@ -460,18 +478,18 @@ class FloatingWindowService : Service() {
 
     private fun toggleWindowState() {
         hideKeyboard()
-
         if (isExpanded) {
             windowManager.removeView(floatingView)
-            minimizedParams = createLayoutParams(false)
-            minimizedParams?.x = floatingParams?.x ?: 100
+            minimizedParams = createLayoutParams(false, 80, 80)
+            minimizedParams?.x = floatingParams?.x ?: 50
             minimizedParams?.y = floatingParams?.y ?: 200
             windowManager.addView(minimizedView, minimizedParams)
             isExpanded = false
         } else {
             windowManager.removeView(minimizedView)
-            floatingParams = createLayoutParams(false)
-            floatingParams?.x = minimizedParams?.x ?: 100
+            val (w, h) = getSizeForMode(currentSizeMode)
+            floatingParams = createLayoutParams(false, w, h)
+            floatingParams?.x = minimizedParams?.x ?: 50
             floatingParams?.y = minimizedParams?.y ?: 200
             windowManager.addView(floatingView, floatingParams)
             isExpanded = true
@@ -480,16 +498,8 @@ class FloatingWindowService : Service() {
 
     private fun removeAllViews() {
         hideKeyboard()
-        floatingView?.let {
-            try {
-                windowManager.removeView(it)
-            } catch (_: Exception) {}
-        }
-        minimizedView?.let {
-            try {
-                windowManager.removeView(it)
-            } catch (_: Exception) {}
-        }
+        floatingView?.let { try { windowManager.removeView(it) } catch (_: Exception) {} }
+        minimizedView?.let { try { windowManager.removeView(it) } catch (_: Exception) {} }
         floatingView = null
         minimizedView = null
         floatingParams = null
@@ -498,15 +508,10 @@ class FloatingWindowService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "书伴服务",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
+            val channel = NotificationChannel(CHANNEL_ID, "书伴服务", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "书伴悬浮窗服务运行中"
             }
-            val notificationManager = getSystemService(NotificationManager::class.java)
-            notificationManager.createNotificationChannel(channel)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
 
@@ -522,5 +527,8 @@ class FloatingWindowService : Service() {
     companion object {
         private const val CHANNEL_ID = "shuban_floating_window"
         private const val NOTIFICATION_ID = 1
+        private const val SIZE_SMALL = 0
+        private const val SIZE_MEDIUM = 1
+        private const val SIZE_LARGE = 2
     }
 }
