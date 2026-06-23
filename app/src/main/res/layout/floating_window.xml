@@ -67,7 +67,8 @@
         app:tabIndicatorColor="@color/primary"
         app:tabSelectedTextColor="@color/primary"
         app:tabTextColor="@color/text_secondary"
-        app:tabMode="scrollable">
+        app:tabMode="fixed"
+        app:tabGravity="fill">
 
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
