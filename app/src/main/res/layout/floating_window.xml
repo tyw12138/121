@@ -66,7 +66,8 @@
         android:layout_marginTop="4dp"
         app:tabIndicatorColor="@color/primary"
         app:tabSelectedTextColor="@color/primary"
-        app:tabTextColor="@color/text_secondary">
+        app:tabTextColor="@color/text_secondary"
+        app:tabMode="scrollable">
 
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
@@ -83,14 +84,20 @@
             android:layout_height="wrap_content"
             android:text="人物" />
 
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="推荐" />
+
     </com.google.android.material.tabs.TabLayout>
 
     <FrameLayout
         android:id="@+id/content_container"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
+        android:layout_height="220dp"
         android:layout_marginTop="4dp">
 
+        <!-- 对话页面：角色对话模式 -->
         <LinearLayout
             android:id="@+id/layout_chat"
             android:layout_width="match_parent"
@@ -101,6 +108,29 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="对话角色："
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary" />
+
+                <Spinner
+                    android:id="@+id/spinner_character"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
                 android:orientation="horizontal">
 
                 <EditText
@@ -142,6 +172,7 @@
 
         </LinearLayout>
 
+        <!-- 剧情页面：摘要 + 情感分析 + 时间线 -->
         <LinearLayout
             android:id="@+id/layout_summary"
             android:layout_width="match_parent"
@@ -149,34 +180,65 @@
             android:orientation="vertical"
             android:visibility="gone">
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_analyze"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/primary"
+                    android:text="剧情摘要"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="4dp" />
+
+                <Button
+                    android:id="@+id/btn_emotion"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/accent"
+                    android:text="情感分析"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="4dp" />
+
+                <Button
+                    android:id="@+id/btn_timeline"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/primary_dark"
+                    android:text="时间线"
+                    android:textColor="@color/white"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1">
+                android:layout_weight="1"
+                android:layout_marginTop="4dp">
 
                 <TextView
                     android:id="@+id/tv_summary"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="4dp"
-                    android:text='粘贴小说文本后点击"分析剧情"按钮，AI 将为你生成剧情摘要...'
+                    android:text='粘贴小说文本后，点击上方按钮进行分析...'
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp" />
 
             </ScrollView>
 
-            <Button
-                android:id="@+id/btn_analyze"
-                android:layout_width="match_parent"
-                android:layout_height="36dp"
-                android:layout_marginTop="4dp"
-                android:backgroundTint="@color/primary"
-                android:text="@string/btn_analyze"
-                android:textColor="@color/white"
-                android:textSize="13sp" />
-
         </LinearLayout>
 
+        <!-- 人物关系页面：人物卡片 + 关系连线 -->
         <LinearLayout
             android:id="@+id/layout_characters"
             android:layout_width="match_parent"
@@ -184,10 +246,39 @@
             android:orientation="vertical"
             android:visibility="gone">
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_character"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/primary"
+                    android:text="人物卡片"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="4dp" />
+
+                <Button
+                    android:id="@+id/btn_relation"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/accent"
+                    android:text="关系图谱"
+                    android:textColor="@color/white"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1">
+                android:layout_weight="1"
+                android:layout_marginTop="4dp">
 
                 <LinearLayout
                     android:id="@+id/character_container"
@@ -199,15 +290,49 @@
 
             </ScrollView>
 
+        </LinearLayout>
+
+        <!-- 推荐页面 -->
+        <LinearLayout
+            android:id="@+id/layout_recommend"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
             <Button
-                android:id="@+id/btn_character"
+                android:id="@+id/btn_recommend"
                 android:layout_width="match_parent"
-                android:layout_height="36dp"
-                android:layout_marginTop="4dp"
+                android:layout_height="32dp"
                 android:backgroundTint="@color/primary"
-                android:text="@string/btn_character"
+                android:text="获取推荐"
                 android:textColor="@color/white"
-                android:textSize="13sp" />
+                android:textSize="12sp" />
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="4dp">
+
+                <LinearLayout
+                    android:id="@+id/recommend_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:padding="16dp"
+                        android:text="粘贴你正在阅读的文本，\nAI 将为你推荐相似风格的好书"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+            </ScrollView>
 
         </LinearLayout>
 
