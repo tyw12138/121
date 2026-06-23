@@ -60,7 +60,9 @@ class FloatingWindowService : Service() {
         removeFloatingWindow()
     }
 
-    private fun createLayoutParams(): WindowManager.LayoutParams {
+    private fun createLayoutParams(focusable: Boolean = false): WindowManager.LayoutParams {
+        val flags = WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         return WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -70,8 +72,7 @@ class FloatingWindowService : Service() {
                 @Suppress("DEPRECATION")
                 WindowManager.LayoutParams.TYPE_PHONE
             },
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            if (focusable) flags else flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -84,37 +85,44 @@ class FloatingWindowService : Service() {
         val params = createLayoutParams()
         floatingParams = params
 
-        // 创建带 Material 主题的 Context，TabLayout 等组件需要
         val themedContext = ContextThemeWrapper(this, R.style.Theme_ShuBan)
 
-        // 创建展开状态的悬浮窗
         floatingView = LayoutInflater.from(themedContext).inflate(R.layout.floating_window, null)
         setupFloatingWindow(floatingView!!)
 
-        // 创建最小化状态的悬浮窗
         minimizedView = LayoutInflater.from(themedContext).inflate(R.layout.floating_window_minimized, null)
         setupMinimizedWindow(minimizedView!!)
 
-        // 标题栏拖拽
         setupDragListener(floatingView!!, params)
         setupDragListener(minimizedView!!, params)
 
-        // 默认显示展开状态
         windowManager.addView(floatingView, params)
         isExpanded = true
     }
 
-    private fun setFocusable(focusable: Boolean) {
+    private fun updateFocusable(focusable: Boolean) {
         val params = floatingParams ?: return
         val view = if (isExpanded) floatingView else minimizedView ?: return
+
+        val flags = params.flags
         if (focusable) {
-            params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
+            params.flags = flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
         } else {
-            params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+            params.flags = flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
         }
         try {
             windowManager.updateViewLayout(view, params)
         } catch (_: Exception) {}
+    }
+
+    private fun hideKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(floatingView?.windowToken, 0)
+    }
+
+    private fun showKeyboard(view: View) {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(view, 0)
     }
 
     private fun setupFloatingWindow(view: View) {
@@ -133,24 +141,33 @@ class FloatingWindowService : Service() {
         val btnMinimize = view.findViewById<View>(R.id.btn_minimize)
         val btnClose = view.findViewById<View>(R.id.btn_close)
 
-        // EditText 焦点监听：获取焦点时允许输入法，失去焦点时恢复
-        val focusListener = View.OnFocusChangeListener { _, hasFocus ->
-            setFocusable(hasFocus)
+        etInputText.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.showSoftInput(if (etInputText.isFocused) etInputText else etQuestion, 0)
+                updateFocusable(true)
+                showKeyboard(etInputText)
+            } else {
+                hideKeyboard()
+                updateFocusable(false)
             }
         }
-        etInputText.onFocusChangeListener = focusListener
-        etQuestion.onFocusChangeListener = focusListener
 
-        // 点击 EditText 时确保可聚焦
-        etInputText.setOnClickListener { setFocusable(true) }
-        etQuestion.setOnClickListener { setFocusable(true) }
+        etQuestion.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                updateFocusable(true)
+                showKeyboard(etQuestion)
+            } else {
+                hideKeyboard()
+                updateFocusable(false)
+            }
+        }
 
-        // Tab 切换
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
+                hideKeyboard()
+                updateFocusable(false)
+                etInputText.clearFocus()
+                etQuestion.clearFocus()
+
                 when (tab?.position) {
                     0 -> {
                         layoutChat.visibility = View.VISIBLE
@@ -174,8 +191,12 @@ class FloatingWindowService : Service() {
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
 
-        // 发送按钮
         btnSend.setOnClickListener {
+            hideKeyboard()
+            updateFocusable(false)
+            etInputText.clearFocus()
+            etQuestion.clearFocus()
+
             val text = etInputText.text.toString()
             val question = etQuestion.text.toString()
             if (text.isNotEmpty() && question.isNotEmpty()) {
@@ -183,21 +204,27 @@ class FloatingWindowService : Service() {
                 etInputText.setText(response)
                 etQuestion.text.clear()
             }
-            setFocusable(false)
         }
 
-        // 分析剧情按钮
         btnAnalyze.setOnClickListener {
+            hideKeyboard()
+            updateFocusable(false)
+            etInputText.clearFocus()
+            etQuestion.clearFocus()
+
             val text = etInputText.text.toString()
             if (text.isNotEmpty()) {
                 val summary = aiEngine.summarize(text)
                 tvSummary.text = summary
             }
-            setFocusable(false)
         }
 
-        // 人物关系按钮
         btnCharacter.setOnClickListener {
+            hideKeyboard()
+            updateFocusable(false)
+            etInputText.clearFocus()
+            etQuestion.clearFocus()
+
             val text = etInputText.text.toString()
             if (text.isNotEmpty()) {
                 val characters = aiEngine.extractCharacters(text)
@@ -211,16 +238,16 @@ class FloatingWindowService : Service() {
                     characterContainer.addView(characterView)
                 }
             }
-            setFocusable(false)
         }
 
-        // 最小化按钮
         btnMinimize.setOnClickListener {
-            setFocusable(false)
+            hideKeyboard()
+            updateFocusable(false)
+            etInputText.clearFocus()
+            etQuestion.clearFocus()
             toggleWindowState()
         }
 
-        // 关闭按钮
         btnClose.setOnClickListener {
             stopSelf()
         }
@@ -233,16 +260,17 @@ class FloatingWindowService : Service() {
     }
 
     private fun toggleWindowState() {
+        hideKeyboard()
+        updateFocusable(false)
+
         val params = createLayoutParams()
         floatingParams = params
 
         if (isExpanded) {
-            // 切换到最小化状态
             windowManager.removeView(floatingView)
             windowManager.addView(minimizedView, params)
             isExpanded = false
         } else {
-            // 切换到展开状态
             windowManager.removeView(minimizedView)
             windowManager.addView(floatingView, params)
             isExpanded = true
@@ -250,15 +278,14 @@ class FloatingWindowService : Service() {
     }
 
     private fun setupDragListener(view: View, params: WindowManager.LayoutParams) {
-        // 只在标题栏区域响应拖拽，避免和内容区点击冲突
-        val dragHandle = view.findViewById<View>(R.id.btn_minimize)?.parent as? View ?: view
+        val titleBar = view.findViewById<View>(R.id.btn_minimize)?.parent as? View ?: view
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
 
-        dragHandle.setOnTouchListener { _, event ->
+        titleBar.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = params.x
@@ -273,6 +300,8 @@ class FloatingWindowService : Service() {
                     val dy = event.rawY - initialTouchY
                     if (!isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
                         isDragging = true
+                        hideKeyboard()
+                        updateFocusable(false)
                     }
                     if (isDragging) {
                         params.x = initialX + dx.toInt()
@@ -282,12 +311,8 @@ class FloatingWindowService : Service() {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging) {
-                        // 不是拖拽，让子 View 处理点击
-                        view.performClick()
-                    }
                     isDragging = false
-                    true
+                    false
                 }
                 else -> false
             }
@@ -295,6 +320,7 @@ class FloatingWindowService : Service() {
     }
 
     private fun removeFloatingWindow() {
+        hideKeyboard()
         floatingView?.let {
             if (it.isShown) {
                 windowManager.removeView(it)
