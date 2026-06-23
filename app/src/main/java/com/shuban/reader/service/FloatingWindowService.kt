@@ -46,7 +46,7 @@ class FloatingWindowService : Service() {
         if (floatingView == null) {
             showFloatingWindow()
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -112,6 +112,7 @@ class FloatingWindowService : Service() {
         val characterContainer = view.findViewById<LinearLayout>(R.id.character_container)
         val btnCharacter = view.findViewById<Button>(R.id.btn_character)
         val btnMinimize = view.findViewById<View>(R.id.btn_minimize)
+        val btnClose = view.findViewById<View>(R.id.btn_close)
 
         // Tab 切换
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -179,6 +180,11 @@ class FloatingWindowService : Service() {
         // 最小化按钮
         btnMinimize.setOnClickListener {
             toggleWindowState()
+        }
+
+        // 关闭按钮
+        btnClose.setOnClickListener {
+            stopSelf()
         }
     }
 
