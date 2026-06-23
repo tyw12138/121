@@ -9,6 +9,7 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -76,12 +77,15 @@ class FloatingWindowService : Service() {
         params.x = 100
         params.y = 200
 
+        // 创建带 Material 主题的 Context，TabLayout 等组件需要
+        val themedContext = ContextThemeWrapper(this, R.style.Theme_ShuBan)
+
         // 创建展开状态的悬浮窗
-        floatingView = LayoutInflater.from(this).inflate(R.layout.floating_window, null)
+        floatingView = LayoutInflater.from(themedContext).inflate(R.layout.floating_window, null)
         setupFloatingWindow(floatingView!!)
 
         // 创建最小化状态的悬浮窗
-        minimizedView = LayoutInflater.from(this).inflate(R.layout.floating_window_minimized, null)
+        minimizedView = LayoutInflater.from(themedContext).inflate(R.layout.floating_window_minimized, null)
         setupMinimizedWindow(minimizedView!!)
 
         // 添加触摸监听
@@ -162,7 +166,7 @@ class FloatingWindowService : Service() {
                 val characters = aiEngine.extractCharacters(text)
                 characterContainer.removeAllViews()
                 for (character in characters) {
-                    val characterView = LayoutInflater.from(this)
+                    val characterView = LayoutInflater.from(view.context)
                         .inflate(R.layout.item_character, characterContainer, false)
                     characterView.findViewById<TextView>(R.id.tv_character_name).text = character.name
                     characterView.findViewById<TextView>(R.id.tv_character_role).text = character.role
